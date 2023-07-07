@@ -1,0 +1,224 @@
+db.Employee.find({ "Name.middlename": "Kumar" })
+
+db.Employee.find({ "Salary in INR": { $gt: 20000, $lt: 35000 } })
+
+db.Employee.countDocuments({ Role: "Manager" })
+
+db.Employee.deleteOne({ "Name.Firstname": "Rajesh", Designation: "Scientist" })
+
+db.Employee.find({ Age: { $lt: 35 }, "Salary in INR": { $gte: 30000, $lt: 35000 } })
+
+db.Employee.updateMany({ Role: "Team Lead" }, { $set: { "Salary in INR": 55650 } })
+
+db.Employee.aggregate([
+  { $group: { _id: "$Age", averageSalary: { $avg: "$Salary in INR" } } }
+])
+
+var mapFunction = function () {
+  emit(this.Age, this["Salary in INR"]);
+};
+
+var reduceFunction = function (key, values) {
+  return Array.avg(values);
+};
+
+db.Employee.mapReduce(mapFunction, reduceFunction, { out: "employee_average_salary" })
+
+
+
+db.Employee.insertMany([
+  {
+    "Name": {
+      "Firstname": "John",
+      "middlename": "Kumar",
+      "lastname": "Smith"
+    },
+    "Age": 30,
+    "Salary in INR": 25000,
+    "Designation": "Employee",
+    "Role": ["Manager", "Software Developer"]
+  },
+  {
+    "Name": {
+      "Firstname": "Emma",
+      "middlename": "Kumar",
+      "lastname": "Johnson"
+    },
+    "Age": 35,
+    "Salary in INR": 30000,
+    "Designation": "Employee",
+    "Role": ["Team Lead", "Software Developer"]
+  },
+  {
+    "Name": {
+      "Firstname": "Michael",
+      "middlename": "Kumar",
+      "lastname": "Brown"
+    },
+    "Age": 28,
+    "Salary in INR": 28000,
+    "Designation": "Employee",
+    "Role": ["Software Developer"]
+  },
+  {
+    "Name": {
+      "Firstname": "Sophia",
+      "middlename": "Kumar",
+      "lastname": "Davis"
+    },
+    "Age": 32,
+    "Salary in INR": 32000,
+    "Designation": "Employee",
+    "Role": ["Tester", "UI Designer"]
+  },
+  {
+    "Name": {
+      "Firstname": "Daniel",
+      "middlename": "Kumar",
+      "lastname": "Wilson"
+    },
+    "Age": 27,
+    "Salary in INR": 22000,
+    "Designation": "Employee",
+    "Role": ["Software Developer"]
+  },
+  {
+    "Name": {
+      "Firstname": "Olivia",
+      "middlename": "Kumar",
+      "lastname": "Martinez"
+    },
+    "Age": 29,
+    "Salary in INR": 27000,
+    "Designation": "Employee",
+    "Role": ["Software Developer"]
+  },
+  {
+    "Name": {
+      "Firstname": "Alexander",
+      "middlename": "Kumar",
+      "lastname": "Taylor"
+    },
+    "Age": 33,
+    "Salary in INR": 34000,
+    "Designation": "Employee",
+    "Role": ["Manager", "UI Designer"]
+  },
+  {
+    "Name": {
+      "Firstname": "Ava",
+      "middlename": "Kumar",
+      "lastname": "Anderson"
+    },
+    "Age": 31,
+    "Salary in INR": 31000,
+    "Designation": "Employee",
+    "Role": ["Tester"]
+  },
+  {
+    "Name": {
+      "Firstname": "William",
+      "middlename": "Kumar",
+      "lastname": "Thomas"
+    },
+    "Age": 26,
+    "Salary in INR": 23000,
+    "Designation": "Employee",
+    "Role": ["Software Developer"]
+  },
+  {
+    "Name": {
+      "Firstname": "Mia",
+      "middlename": "Kumar",
+      "lastname": "Rodriguez"
+    },
+    "Age": 34,
+    "Salary in INR": 33000,
+    "Designation": "Employee",
+    "Role": ["Manager", "Team Lead"]
+  },
+  {
+    "Name": {
+      "Firstname": "James",
+      "middlename": "Kumar",
+      "lastname": "Lopez"
+       },
+    "Age": 30,
+    "Salary in INR": 25000,
+    "Designation": "Employee",
+    "Role": ["Software Developer"]
+  },
+  {
+    "Name": {
+      "Firstname": "Isabella",
+      "middlename": "Kumar",
+      "lastname": "Lee"
+    },
+    "Age": 27,
+    "Salary in INR": 22000,
+    "Designation": "Employee",
+    "Role": ["Software Developer"]
+  },
+  {
+    "Name": {
+      "Firstname": "Benjamin",
+      "middlename": "Kumar",
+      "lastname": "Harris"
+    },
+    "Age": 31,
+    "Salary in INR": 31000,
+    "Designation": "Employee",
+    "Role": ["UI Designer"]
+  },
+  {
+    "Name": {
+      "Firstname": "Charlotte",
+      "middlename": "Kumar",
+      "lastname": "Clark"
+    },
+    "Age": 29,
+    "Salary in INR": 27000,
+    "Designation": "Employee",
+    "Role": ["Software Developer"]
+  },
+  {
+    "Name": {
+      "Firstname": "Henry",
+      "middlename": "Kumar",
+      "lastname": "Lewis"
+    },
+    "Age": 32,
+    "Salary in INR": 32000,
+    "Designation": "Employee",
+    "Role": ["Tester"]
+  },
+  {
+    "Name": {
+      "Firstname": "Liam",
+      "middlename": "Kumar",
+      "lastname": "Wright"
+    },
+    "Age": 28,
+    "Salary in INR": 28000,
+    "Designation": "Employee",
+    "Role": ["Software Developer"]
+  }
+]);
+
+
+db.Employee.updateMany({ Role: { $in: ["Team Lead"] } }, { $set: { "Salary in INR": 55650 } })
+
+
+var mapFunction = function () {
+  var totalAmount = 0;
+  for (var i = 0; i < this.Department.length; i++) {
+    totalAmount += this.Salary[i];
+  }
+  emit(this.Name, totalAmount);
+};
+
+var reduceFunction = function (key, values) {
+  return Array.sum(values);
+};
+
+db.Sta.mapReduce(mapFunction, reduceFunction, { out: "sta_jobs_earnings" })
