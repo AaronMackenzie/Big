@@ -1,0 +1,85 @@
+CREATE DATABASE salesdb;
+USE salesdb;
+CREATE TABLE sales (
+  transaction_id INT,
+  product STRING,
+  name STRING,
+  price DOUBLE,
+  country STRING,
+  state STRING,
+  card_type STRING
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE;
+
+
+
+
+LOAD DATA LOCAL INPATH '/path/to/sales.csv' INTO TABLE sales;
+
+
+
+INSERT INTO sales VALUES
+  (1, 'Product1', 'John', 1000.0, 'Country1', 'State1', 'Visa'),
+  (2, 'Product2', 'Jane', 1500.0, 'Country2', 'State2', 'Mastercard'),
+  (3, 'Product3', 'Bob', 2000.0, 'Country1', 'State3', 'Visa'),
+  (4, 'Product4', 'Alice', 2500.0, 'Country3', 'State4', 'Visa'),
+  (5, 'Product5', 'Mike', 3000.0, 'Country2', 'State5', 'Mastercard');
+
+
+
+
+
+SELECT country, COUNT(*) AS sales_count
+FROM sales
+GROUP BY country;
+
+
+
+
+SELECT state, COUNT(*) AS sales_count
+FROM sales
+GROUP BY state;
+
+
+
+
+SELECT product, GROUP_CONCAT(name) AS names
+FROM sales
+GROUP BY product;
+
+
+
+CREATE VIEW visa_transactions AS
+SELECT *
+FROM sales
+WHERE card_type = 'Visa';
+
+
+
+
+
+
+CREATE VIEW mastercard_transactions AS
+SELECT *
+FROM sales
+WHERE card_type = 'Mastercard';
+
+
+
+SELECT *
+FROM sales
+WHERE state = 'Seattle';
+
+
+
+
+SELECT state, MAX(transaction_id) AS max_transactions
+FROM sales
+WHERE state = 'Ontario';
+
+
+
+
+
