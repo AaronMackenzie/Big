@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Big data notes · Aaron Mackenzie</title>
+<meta name="description" content="A notes explorer for Hadoop, Hive, MongoDB and Android intent notes, plus an in-browser MapReduce word-count visualiser.">
+<style>
+:root{
+  --bg:#0b1220; --panel:#111a2c; --panel2:#16213a; --line:#25324d;
+  --ink:#ebe8df; --muted:#97a3bb; --amber:#f2b84b; --teal:#5fd1b4; --rose:#ef7f8e; --sky:#7db4ff;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--amber)}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:4px}
+.shell{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh}
+aside{position:sticky;top:0;height:100vh;padding:28px 20px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:22px;background:linear-gradient(180deg,#0d1526,#0b1220)}
+.brand h1{font:600 22px/1.15 var(--serif);margin:0}
+.brand p{margin:6px 0 0;color:var(--muted);font-size:13px}
+nav{display:flex;flex-direction:column;gap:4px}
+nav button{all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;color:var(--ink);font-size:15px;min-height:44px;box-sizing:border-box}
+nav button:hover{background:var(--panel)}
+nav button[aria-selected="true"]{background:var(--panel2);box-shadow:inset 2px 0 0 var(--amber)}
+nav button:focus-visible{outline:2px solid var(--amber);outline-offset:-2px}
+nav button small{font:12px var(--mono);color:var(--muted)}
+.side-foot{margin-top:auto;font-size:13px;color:var(--muted)}
+main{padding:36px clamp(18px,4vw,56px) 80px;max-width:1180px}
+.exp{display:none}.exp.on{display:block}
+.exp>header{margin-bottom:22px}
+.exp h2{font:600 clamp(26px,3.4vw,38px)/1.1 var(--serif);margin:0 0 10px}
+.exp header p{margin:0;color:var(--muted);max-width:70ch}
+.tag{display:inline-block;font:11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--amber);margin-bottom:10px}
+.lab{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
+.side{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card h3{margin:0 0 10px;font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.read{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:14px;margin:0}
+.read dt{color:var(--muted)}.read dd{margin:0;font:600 14px var(--mono);text-align:right}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.btn{cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--ink);padding:0 14px;min-height:44px;border-radius:8px;font:600 14px var(--sans)}
+.btn:hover{border-color:#3a4d78}
+.btn.primary{background:var(--amber);color:#1b1405;border-color:var(--amber)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn[aria-pressed="true"],.btn[aria-selected="true"]{background:var(--panel2);border-color:var(--amber);color:var(--amber)}
+label.ctl{display:block;font-size:13px;color:var(--muted);margin-top:12px}
+select,input[type=search],input[type=text],textarea{width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:14px var(--mono)}
+select,input[type=search],input[type=text]{min-height:44px}
+textarea{resize:vertical;min-height:120px}
+.check{display:flex;gap:10px;align-items:center;font-size:14px;margin-top:12px;min-height:32px}
+.check input{width:18px;height:18px;accent-color:var(--amber)}
+.hint{font-size:13px;color:var(--muted);margin:10px 2px 0}
+.explain{margin-top:26px;display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.explain div{border-top:1px solid var(--line);padding-top:12px}
+.explain h4{margin:0 0 6px;font:600 16px var(--serif)}
+.explain p{margin:0;color:var(--muted);font-size:14.5px}
+.note{border:1px dashed var(--line);border-radius:10px;padding:14px 16px;color:var(--muted);font-size:14px;margin-top:18px}
+.note strong{color:var(--ink)}
+code,.mono{font-family:var(--mono)}
+pre{margin:0;font:12.5px/1.5 var(--mono);color:#cfd7e8;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto;max-height:340px;white-space:pre}
+/* notes */
+.files{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.fsum{color:var(--muted);font-size:15px;max-width:80ch;margin:0 0 6px}
+.sec{border-top:1px solid var(--line);padding:16px 0;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px}
+.sec>div{min-width:0}
+.sec h3{margin:0 0 4px;font:600 18px var(--serif)}
+.sec .meta{font:12px var(--mono);color:var(--muted);margin-bottom:8px}
+.sec p{margin:0;font-size:14.5px;color:var(--ink)}
+.badge{display:inline-block;font:11px var(--mono);padding:2px 8px;border:1px solid var(--amber);border-radius:20px;color:var(--amber);margin-left:8px;vertical-align:middle}
+.ftag{display:inline-block;font:11px var(--mono);padding:2px 8px;border:1px solid var(--line);border-radius:20px;color:var(--muted);margin-right:8px}
+mark{background:#f2b84b33;color:inherit;border-radius:2px}
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+td.num{font:600 13.5px var(--mono);white-space:nowrap}
+tr.chg td{background:#f2b84b14}
+.table-wrap{overflow-x:auto}
+/* word count */
+.steps{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.mappers{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.mapper{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg)}
+.mapper h4{margin:0 0 8px;font:600 12px var(--mono);color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.pair{display:inline-block;font:12.5px var(--mono);border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin:0 6px 6px 0;background:var(--panel)}
+.pair b{color:var(--amber);font-weight:600}
+.off{font:12px var(--mono);color:var(--muted);margin-right:8px}
+.line{font:13px var(--mono);margin:0 0 4px;white-space:pre-wrap;word-break:break-word}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;min-width:80px}
+.bar b{display:block;height:100%;background:var(--teal)}
+.stagehead{font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.ok{color:var(--teal)}.bad{color:var(--rose)}
+.out{white-space:pre;font:13px var(--mono);color:#cfd7e8}
+.cmd{margin-bottom:12px;white-space:pre-wrap;word-break:break-word}
+.res:empty{display:none}
+.err{color:var(--rose);font-size:14px}
+@media (max-width:980px){
+  .shell{grid-template-columns:1fr}
+  aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);padding:18px 16px}
+  nav{flex-direction:row;flex-wrap:wrap}
+  nav button{border:1px solid var(--line)}
+  .side-foot{display:none}
+  .lab{grid-template-columns:1fr}
+  .sec{grid-template-columns:minmax(0,1fr)}
+  main{min-width:0}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside>
+  <div class="brand">
+    <h1>Big data notes</h1>
+    <p>Lab notes on Hadoop, Hive, MongoDB and Android intents, made searchable, with a word-count job you can step through.</p>
+  </div>
+  <nav role="tablist" aria-label="Sections">
+    <button role="tab" aria-selected="true" data-tab="notes">Notes explorer <small>01</small></button>
+    <button role="tab" aria-selected="false" data-tab="wc">Word count <small>02</small></button>
+    <button role="tab" aria-selected="false" data-tab="lab">Query lab <small>03</small></button>
+  </nav>
+  <div class="side-foot">The six .txt files in the repository are embedded here word for word. This page runs entirely in your browser and makes no network requests.</div>
+</aside>
+
+<main>
+
+<!-- 01 NOTES -->
+<section class="exp on" id="notes" role="tabpanel">
+  <header><div class="tag">01 · Reference</div>
+    <h2>Notes explorer</h2>
+    <p>Six text files, split into small labelled parts with a plain explanation beside each. Parts marked <span class="badge" style="margin:0">Check</span> contain something that is wrong, misleading or cannot be run as written.</p></header>
+  <div class="stage">
+    <div class="files" id="files" role="group" aria-label="Files"></div>
+    <label class="ctl" for="search" style="margin-top:0">Search all six files (code and explanations)</label>
+    <input type="search" id="search" placeholder="for example: GROUP BY, intent, combiner" autocomplete="off">
+    <div class="hint" id="searchinfo" aria-live="polite"></div>
+    <p class="fsum" id="fsum" style="margin-top:14px"></p>
+    <div id="secs"></div>
+  </div>
+  <div class="explain">
+    <div><h4>What the files are</h4><p>Course-lab notes: an HDFS shell session, a Java word-count job, HiveQL, MongoDB shell commands, and two small Android apps about intents.</p></div>
+    <div><h4>The swapped Android names</h4><p><code>explicit.txt</code> dials with <code>Intent.ACTION_DIAL</code> and no class name, which is an implicit intent. <code>implicit.txt</code> starts <code>MainActivity2.class</code> by name, which is an explicit intent.</p></div>
+    <div><h4>Reading the Check badges</h4><p>They come from reading the code against the language or tool, not from running it. Hive, MongoDB and Hadoop are not installed here, so none of the original commands were executed.</p></div>
+  </div>
+</section>
+
+<!-- 02 WORD COUNT -->
+<section class="exp" id="wc" role="tabpanel">
+  <header><div class="tag">02 · MapReduce</div>
+    <h2>Word count, step by step</h2>
+    <p>The job from <code>WordCount.txt</code>, run in your browser: map each word to (word, 1), optionally combine per mapper, shuffle and sort by key, then reduce by summing. Edit the text and watch every stage change.</p></header>
+  <div class="lab">
+    <div class="stage">
+      <div class="steps" role="tablist" aria-label="MapReduce stages" id="steps"></div>
+      <div id="wcstage" aria-live="polite"></div>
+    </div>
+    <div class="side">
+      <div class="card"><h3>Input</h3>
+        <label class="ctl" for="wctext" style="margin-top:0">Text (one line per record)</label>
+        <textarea id="wctext" spellcheck="false" aria-describedby="wchint"></textarea>
+        <div class="row" style="margin-top:10px"><button class="btn" id="wcsample">Use the notes' sample</button></div>
+        <label class="ctl" for="wcmap">Mappers (input splits)</label>
+        <select id="wcmap"><option>1</option><option>2</option><option>3</option><option>4</option></select>
+        <label class="check"><input type="checkbox" id="wccomb" checked> Combiner (the notes set one)</label>
+        <label class="check"><input type="checkbox" id="wcnorm"> Lower-case and strip punctuation (not in the notes)</label>
+        <p class="hint" id="wchint">The notes' sample is rebuilt from the recorded output, because the real gg.txt is not in the repository.</p>
+      </div>
+      <div class="card"><h3>Readout</h3>
+        <dl class="read" aria-live="polite">
+          <dt>Input lines</dt><dd id="r-lines"></dd>
+          <dt>Words emitted by map</dt><dd id="r-map"></dd>
+          <dt>Pairs after combine</dt><dd id="r-comb"></dd>
+          <dt>Pairs shuffled</dt><dd id="r-shuf"></dd>
+          <dt>Distinct words</dt><dd id="r-dist"></dd>
+          <dt>Matches WordCount.txt</dt><dd id="r-match"></dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+  <div class="explain">
+    <div><h4>What it does</h4><p>Counts how often each word appears. Map turns each word into a (word, 1) pair, the framework groups pairs by word, and reduce adds up each group.</p></div>
+    <div><h4>How this repo does it</h4><p><code>Wordcount.Map</code> uses <code>StringTokenizer</code> (splits on space, tab, newline, carriage return, form feed); <code>Wordcount.Reduce</code> sums the counts and is also the combiner. This page applies those same rules and sorts keys by their UTF-8 bytes, as Hadoop's <code>Text</code> does.</p></div>
+    <div><h4>How to read it</h4><p>With the combiner on, each mapper first adds up its own words, so fewer pairs cross the network: compare "Words emitted" with "Pairs shuffled". The final counts are the same either way.</p></div>
+  </div>
+  <div class="note"><strong>Honest note.</strong> This is a simulation of the algorithm, not Hadoop. The notes' job read one small file, which Hadoop runs as a single mapper; the mapper selector splits the lines evenly only to show how a combiner works. Java and Hadoop are not installed on the machine used to build this page, so <code>Wordcount.java</code> itself was not run. The page's counts were checked against an independent Python implementation of the same rules.</div>
+</section>
+
+<!-- 03 QUERY LAB -->
+<section class="exp" id="lab" role="tabpanel">
+  <header><div class="tag">03 · Databases</div>
+    <h2>Query lab</h2>
+    <p>The Mongo commands and HiveQL queries from the notes, worked out in JavaScript on the sample rows that the notes insert. This is a small stand-in for the two databases, not MongoDB or Hive.</p></header>
+  <div class="row" style="margin-bottom:14px" role="tablist" aria-label="Database">
+    <button class="btn" id="db-mongo" aria-pressed="true">MongoDB: Employee (16 documents)</button>
+    <button class="btn" id="db-hive" aria-pressed="false">Hive: sales (5 rows)</button>
+  </div>
+  <div class="stage res" style="margin:0 0 18px" id="result" aria-live="polite"></div>
+  <div class="lab">
+    <div class="stage">
+      <div class="stagehead" id="datahead"></div>
+      <div class="table-wrap" id="datatable"></div>
+    </div>
+    <div class="side">
+      <div class="card"><h3>Command from the notes</h3>
+        <label class="ctl" for="preset" style="margin-top:0">Pick a command</label>
+        <select id="preset"></select>
+        <pre class="cmd" id="cmdtext" style="margin-top:12px;max-height:200px"></pre>
+        <div class="row"><button class="btn primary" id="runbtn">Run on the sample data</button><button class="btn" id="resetbtn">Reset data</button></div>
+      </div>
+      <div class="card" id="customcard"><h3>Your own find filter</h3>
+        <label class="ctl" for="custom" style="margin-top:0">JSON filter (operators in quotes)</label>
+        <input type="text" id="custom" value='{"Age":{"$lt":35},"Salary in INR":{"$gte":30000,"$lt":35000}}' spellcheck="false">
+        <div class="row" style="margin-top:10px"><button class="btn" id="customrun">Run find</button></div>
+        <p class="hint">Supports equality, dotted paths and $eq, $ne, $gt, $gte, $lt, $lte, $in.</p>
+      </div>
+    </div>
+  </div>
+  <div class="explain">
+    <div><h4>What it does</h4><p>Takes each command from <code>mongodb.txt</code> or <code>Hive.txt</code>, runs it on the rows the notes themselves insert, and shows the result next to the command text.</p></div>
+    <div><h4>How the page does it</h4><p>Each preset is hand-written JavaScript for that one query (filtering, grouping, averaging). The custom filter box uses a small matcher for the operators listed. Updates and deletes change the table above until you press Reset.</p></div>
+    <div><h4>How to read it</h4><p>The notes list queries before the data is inserted, so the results here are what they would return after the insert. Commands marked in the Notes tab as broken (GROUP_CONCAT, MAX without GROUP BY, the Sta map-reduce) show why instead of a result.</p></div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+var DATA = {"files": [{"name": "hadoop.txt", "kind": "HDFS shell session", "total": 169, "summary": "A pasted terminal session on a single-node Hadoop 3.2.4 install (Ubuntu, user hdoop, 1 July 2023). It starts the daemons and then walks through the common HDFS file commands: list, make a directory, create an empty file, copy in and out, move, copy inside HDFS, sizes, and append. The repeated WARN line about the native-hadoop library is harmless: Hadoop falls back to its built-in Java classes.", "sections": [{"title": "Start Hadoop and check the daemons", "start": 1, "end": 23, "text": "HADOOP   COMMANDS 14\n\n\nhdoop@Ubuntu:~$ cd $HADOOP_HOME/sbin && ./start-all.sh\nWARNING: Attempting to start all Apache Hadoop daemons as hdoop in 10 seconds.\nWARNING: This is not a recommended production deployment configuration.\nWARNING: Use CTRL-C to abort.\nStarting namenodes on [localhost]\nStarting datanodes\nStarting secondary namenodes [Ubuntu]\n2023-07-01 19:04:06,354 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nStarting resourcemanager\nStarting nodemanagers\n\n\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ jps\n4305 SecondaryNameNode\n4099 DataNode\n4966 Jps\n3980 NameNode\n4493 ResourceManager\n4622 NodeManager", "note": "start-all.sh starts HDFS (NameNode, DataNode, SecondaryNameNode) and YARN (ResourceManager, NodeManager). jps then lists those five Java processes plus Jps itself, which is the quick check that everything came up.", "flag": false, "tag": ""}, {"title": "List the HDFS root (-ls /)", "start": 25, "end": 30, "text": "hdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -ls /\n2023-07-01 19:05:36,245 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nFound 2 items\ndrwxrwxr-x   - hdoop supergroup          0 2023-07-01 14:10 /tmp\ndrwxr-xr-x   - hdoop supergroup          0 2023-07-01 13:17 /user", "note": "A fresh HDFS has only /tmp and /user here. The listing columns are permissions, replication factor (a dash for directories), owner, group, size in bytes, modification time, path.", "flag": false, "tag": ""}, {"title": "Make a directory and an empty file (-mkdir, -touchz)", "start": 32, "end": 49, "text": "hdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -mkdir /prog2\n2023-07-01 19:29:03,172 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -ls /\n2023-07-01 19:29:09,192 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nFound 3 items\ndrwxr-xr-x   - hdoop supergroup          0 2023-07-01 19:29 /prog2\ndrwxrwxr-x   - hdoop supergroup          0 2023-07-01 14:10 /tmp\n\n\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -touchz /empty.txt\n2023-07-01 19:30:12,339 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -ls /\n2023-07-01 19:30:30,192 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nFound 4 items\n-rw-r--r--   1 hdoop supergroup          0 2023-07-01 19:30 /empty.txt\ndrwxr-xr-x   - hdoop supergroup          0 2023-07-01 19:29 /prog2\ndrwxrwxr-x   - hdoop supergroup          0 2023-07-01 14:10 /tmp\ndrwxr-xr-x   - hdoop supergroup          0 2023-07-01 13:17 /user", "note": "-mkdir /prog2 creates the directory; -touchz /empty.txt creates a zero-byte file (the 0 in the size column and replication 1). The first listing in this block says \"Found 3 items\" but shows only two lines, so a line was lost when the session was pasted.", "flag": true, "tag": "Check"}, {"title": "Copy local files into HDFS (-copyFromLocal, -put)", "start": 50, "end": 67, "text": "hdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -copyFromLocal /home/hdoop/t1.txt /prog2/f1.txt\n2023-07-01 19:48:51,818 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -ls /\n2023-07-01 19:49:00,897 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nFound 4 items\n-rw-r--r--   1 hdoop supergroup          0 2023-07-01 19:30 /empty.txt\ndrwxr-xr-x   - hdoop supergroup          0 2023-07-01 19:48 /prog2\ndrwxrwxr-x   - hdoop supergroup          0 2023-07-01 14:10 /tmp\ndrwxr-xr-x   - hdoop supergroup          0 2023-07-01 13:17 /user\n\n\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -put /home/hdoop/t1.txt /prog2/f2.txt\n2023-07-01 19:52:10,715 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -ls /prog2\n2023-07-01 19:52:24,633 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nFound 2 items\n-rw-r--r--   1 hdoop supergroup          4 2023-07-01 19:48 /prog2/f1.txt\n-rw-r--r--   1 hdoop supergroup          4 2023-07-01 19:52 /prog2/f2.txt", "note": "Both commands upload from the local disk to HDFS; for a single file they behave the same. Both files are 4 bytes: the three letters abc plus a newline.", "flag": false, "tag": ""}, {"title": "Read a file (-cat)", "start": 70, "end": 73, "text": "hdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -cat /prog2/f1.txt\n2023-07-01 19:53:01,436 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nabc", "note": "Prints the file contents (abc) to the terminal.", "flag": false, "tag": ""}, {"title": "Copy back to the local disk (-copyToLocal)", "start": 75, "end": 86, "text": "hdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -copyToLocal /prog2\n2023-07-01 19:53:35,397 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ ls\ndistribute-exclude.sh  hadoop-daemons.sh  mr-jobhistory-daemon.sh  start-all.cmd      start-dfs.cmd        start-yarn.cmd  stop-all.sh       stop-dfs.sh         stop-yarn.sh    yarn-daemons.sh\nFederationStateStore   httpfs.sh          prog2                    start-all.sh       start-dfs.sh         start-yarn.sh   stop-balancer.sh  stop-secure-dns.sh  workers.sh\nhadoop-daemon.sh       kms.sh             refresh-namenodes.sh     start-balancer.sh  start-secure-dns.sh  stop-all.cmd    stop-dfs.cmd      stop-yarn.cmd       yarn-daemon.sh\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ cd /prog2\nbash: cd: /prog2: No such file or directory\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ cd prog2\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin/prog2$ ls\nf1.txt  f2.txt", "note": "Downloads /prog2 into the current local directory (sbin). The failed \"cd /prog2\" afterwards shows that HDFS paths are not local paths: the folder exists on the local disk as prog2, not as /prog2.", "flag": false, "tag": ""}, {"title": "Move a local directory into HDFS (-moveFromLocal)", "start": 88, "end": 98, "text": "hdoop@Ubuntu:~/hadoop-3.2.4/sbin/prog2$ cd ..\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -moveFromLocal prog2 /prog3\n2023-07-01 19:56:23,828 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -ls /\n2023-07-01 19:56:42,475 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nFound 5 items\n-rw-r--r--   1 hdoop supergroup          0 2023-07-01 19:30 /empty.txt\ndrwxr-xr-x   - hdoop supergroup          0 2023-07-01 19:52 /prog2\ndrwxr-xr-x   - hdoop supergroup          0 2023-07-01 19:56 /prog3\ndrwxrwxr-x   - hdoop supergroup          0 2023-07-01 14:10 /tmp\ndrwxr-xr-x   - hdoop supergroup          0 2023-07-01 13:17 /user", "note": "Uploads the local prog2 folder as /prog3 and removes the local copy. The HDFS /prog2 made earlier is still there, as the listing shows.", "flag": false, "tag": ""}, {"title": "Copy and move inside HDFS (-cp, -mv)", "start": 102, "end": 138, "text": "hdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -cp /prog2/f1.txt /prog3/f1_copy.txt\n2023-07-01 19:59:16,639 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\n\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -cat /prog3/f1_copy.txt\n2023-07-01 19:59:53,087 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nabc\n\n\n\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -ls /prog3\n2023-07-01 20:00:20,238 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nFound 3 items\n-rw-r--r--   1 hdoop supergroup          4 2023-07-01 19:56 /prog3/f1.txt\n-rw-r--r--   1 hdoop supergroup          4 2023-07-01 19:59 /prog3/f1_copy.txt\n-rw-r--r--   1 hdoop supergroup          4 2023-07-01 19:56 /prog3/f2.txt\n\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -ls /prog2\n2023-07-01 20:00:58,195 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nFound 2 items\n-rw-r--r--   1 hdoop supergroup          4 2023-07-01 19:48 /prog2/f1.txt\n-rw-r--r--   1 hdoop supergroup          4 2023-07-01 19:52 /prog2/f2.txt\n\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -mv /prog3/f1_copy.txt /prog2\n2023-07-01 20:02:01,668 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\n\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -ls /prog2\n2023-07-01 20:02:11,133 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nFound 3 items\n-rw-r--r--   1 hdoop supergroup          4 2023-07-01 19:48 /prog2/f1.txt\n-rw-r--r--   1 hdoop supergroup          4 2023-07-01 19:59 /prog2/f1_copy.txt\n-rw-r--r--   1 hdoop supergroup          4 2023-07-01 19:52 /prog2/f2.txt\n\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -ls /prog3\n2023-07-01 20:02:25,060 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nFound 2 items\n-rw-r--r--   1 hdoop supergroup          4 2023-07-01 19:56 /prog3/f1.txt\n-rw-r--r--   1 hdoop supergroup          4 2023-07-01 19:56 /prog3/f2.txt", "note": "-cp copies /prog2/f1.txt to /prog3/f1_copy.txt (both exist afterwards). -mv then moves f1_copy.txt into /prog2, so it disappears from /prog3, which the last two listings show.", "flag": false, "tag": ""}, {"title": "Sizes and status (-du, -dus, -stat)", "start": 142, "end": 155, "text": "hdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -du /prog2\n2023-07-01 20:03:13,663 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\n4  4  /prog2/f1.txt\n4  4  /prog2/f1_copy.txt\n4  4  /prog2/f2.txt\n\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -dus /prog2\n2023-07-01 20:04:01,218 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\ndus: DEPRECATED: Please use 'du -s' instead.\n12  12  /prog2\n\nhdoop@Ubuntu:~/hadoop-3.2.4/sbin$ hadoop fs -stat /prog2\n2023-07-01 20:04:43,239 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\n2023-07-01 14:32:02", "note": "-du prints two size columns per file: size, and size including all replicas (equal here because replication is 1). -dus is deprecated in favour of -du -s and prints the directory total, 12 bytes for three 4-byte files. -stat prints the directory modification time.", "flag": false, "tag": ""}, {"title": "Append local files to an HDFS file (-appendToFile)", "start": 159, "end": 169, "text": "hdoop@Ubuntu:~/hadoop-3.2.4/sbin$ cd ~\nhdoop@Ubuntu:~$ pwd\n/home/hdoop\n\nhdoop@Ubuntu:~$ hadoop fs -appendToFile t1.txt t2.txt new.txt\n2023-07-01 20:10:37,202 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\n\nhdoop@Ubuntu:~$ hadoop fs -cat new.txt\n2023-07-01 20:10:53,000 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nabc\nhi how are you", "note": "Appends the local files t1.txt and t2.txt to the HDFS file new.txt, creating it if needed. The -cat afterwards shows abc followed by hi how are you, the contents of the two local files.", "flag": false, "tag": ""}]}, {"name": "WordCount.txt", "kind": "MapReduce job (Java) + run log", "total": 114, "summary": "The classic Hadoop word-count job written against the older org.apache.hadoop.mapred API (package gowtham, class Wordcount), followed by the terminal log of running it on a small file. The mapper emits (word, 1) for every token, the reducer sums the ones, and the same Reduce class is also used as the combiner. The Word count tab runs this logic in your browser.", "sections": [{"title": "Package and imports", "start": 1, "end": 21, "text": "package gowtham;\n\nimport java.io.IOException;\nimport java.util.Iterator;\nimport java.util.StringTokenizer;\n\nimport org.apache.hadoop.fs.Path;\nimport org.apache.hadoop.io.IntWritable;\nimport org.apache.hadoop.io.LongWritable;\nimport org.apache.hadoop.io.Text;\nimport org.apache.hadoop.mapred.FileInputFormat;\nimport org.apache.hadoop.mapred.FileOutputFormat;\nimport org.apache.hadoop.mapred.JobClient;\nimport org.apache.hadoop.mapred.JobConf;\nimport org.apache.hadoop.mapred.MapReduceBase;\nimport org.apache.hadoop.mapred.Mapper;\nimport org.apache.hadoop.mapred.OutputCollector;\nimport org.apache.hadoop.mapred.Reducer;\nimport org.apache.hadoop.mapred.Reporter;\nimport org.apache.hadoop.mapred.TextInputFormat;\nimport org.apache.hadoop.mapred.TextOutputFormat;", "note": "Uses the old mapred API (MapReduceBase, Mapper, Reducer, JobConf, JobClient), which still works in Hadoop 3.", "flag": false, "tag": ""}, {"title": "Mapper: one (word, 1) pair per token", "start": 23, "end": 46, "text": "public class Wordcount {\n\n\tpublic static class Map extends MapReduceBase implements\n\t Mapper<LongWritable, Text, Text, IntWritable>\n\t{\n\t\tprivate final static IntWritable one=new IntWritable(1);\n\t\tprivate Text word= new Text();\n\n\t\t@Override\n\t\tpublic void map(LongWritable key, Text value, OutputCollector<Text, IntWritable> out, Reporter arg3)\n\t\t\t\tthrows IOException \n\t\t{\n\t\t\t// TODO Auto-generated method stub\n\t\t\tString myvalue=value.toString();\n\t\t\tStringTokenizer token=new StringTokenizer(myvalue);\n\t\t\twhile(token.hasMoreTokens()) {\n\t\t\t\tword.set(token.nextToken());\n\t\t\t\tout.collect(word, one);\n\t\t\t}\n\t\t\t\n\t\t}\n\t\t\n\t\t\n\t}", "note": "The input key is the byte offset of the line and is ignored. StringTokenizer splits the line on space, tab, newline, carriage return and form feed, so punctuation stays attached to words and capitals are different words (\"Hello,\" and \"hello\" are separate keys).", "flag": false, "tag": ""}, {"title": "Reducer: sum the counts for a word", "start": 48, "end": 63, "text": "\tpublic static class Reduce extends MapReduceBase implements Reducer<Text, IntWritable, Text, IntWritable>\n\t{\n\n\t\t@Override\n\t\tpublic void reduce(Text key, Iterator<IntWritable> value, OutputCollector<Text, IntWritable> out,\n\t\t\t\tReporter arg3) throws IOException \n\t\t{\n\t\t\t// TODO Auto-generated method stub\n\t\t\tint sum=0;\n\t\t\twhile(value.hasNext()) {\n\t\t\t\tsum+=value.next().get();\n\t\t\t}\n\t\t\tout.collect(key, new IntWritable(sum));\n\t\t}\n\t\t\n\t}", "note": "Receives one word and an iterator of its counts, adds them and writes (word, total). Because addition is associative this same class can also run as the combiner.", "flag": false, "tag": ""}, {"title": "Driver: configure and submit the job", "start": 68, "end": 94, "text": "\tpublic static void main(String[] args) throws IOException {\n\t\t// TODO Auto-generated method stub\n\t\tJobConf conf =new JobConf(Wordcount.class);\n\t\tconf.setJobName(\"WC\");\n\t\t\n\t\tconf.setOutputKeyClass(Text.class);\n\t\tconf.setOutputValueClass(IntWritable.class);\n\t\t\n\t\tconf.setMapperClass(Map.class);\n\t\tconf.setCombinerClass(Reduce.class);\n\t\tconf.setReducerClass(Reduce.class);\n\t\t\n\t\tconf.setInputFormat(TextInputFormat.class);\n\t\tconf.setOutputFormat(TextOutputFormat.class);\n\t\t\n\t\tFileInputFormat.setInputPaths(conf, new Path(args[0]));\n\t\tFileOutputFormat.setOutputPath(conf, new Path(args[1]));\n\t\t\n\t\tJobClient.runJob(conf);\n\t\t\n\t\t\t\t\n\t\t\n\t\t\n\t\t\n\t}\n\n}", "note": "Sets the output types, the mapper, combiner and reducer classes and text input/output formats, takes the input and output paths from args[0] and args[1], and submits with JobClient.runJob. The output directory must not already exist or the job refuses to start. The run command in the log below, \"hadoop jar gow.jar /g1input /g1output\", gives no main class name, which only works when the jar manifest names Wordcount as Main-Class.", "flag": true, "tag": "Check"}, {"title": "Run log: make input, upload, run, read output", "start": 98, "end": 114, "text": "hdoop@Ubuntu:~$ hdfs dfs -mkdir /g1input\n2023-07-01 23:53:09,575 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\n\nhdoop@Ubuntu:~$ gedit gg.txt\n\nhdoop@Ubuntu:~$ hdfs dfs -copyFromLocal gg.txt /g1input\n2023-07-01 23:54:03,900 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\n\nhdoop@Ubuntu:~$ hadoop jar gow.jar /g1input /g1output\n\nhdoop@Ubuntu:~$ hdfs dfs -cat /g1output/p*\n2023-07-01 23:55:15,055 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nabc\t2\ndef\t3\nghi\t2\nklm\t1\nmno\t1", "note": "Creates /g1input, writes gg.txt with an editor, uploads it, runs the jar, then reads /g1output/p* (the part-00000 file). The result is abc 2, def 3, ghi 2, klm 1, mno 1. The contents of gg.txt are not in the repository.", "flag": false, "tag": ""}]}, {"name": "Hive.txt", "kind": "HiveQL script", "total": 85, "summary": "A HiveQL exercise on a small sales table (transaction id, product, customer name, price, country, state, card type): create the table, load or insert rows, aggregate with GROUP BY, make two views, and run two lookups. The Query lab tab computes each result on the five sample rows.", "sections": [{"title": "Create the database and table", "start": 1, "end": 14, "text": "CREATE DATABASE salesdb;\nUSE salesdb;\nCREATE TABLE sales (\n  transaction_id INT,\n  product STRING,\n  name STRING,\n  price DOUBLE,\n  country STRING,\n  state STRING,\n  card_type STRING\n)\nROW FORMAT DELIMITED\nFIELDS TERMINATED BY ','\nSTORED AS TEXTFILE;", "note": "A text-file table with comma-separated fields. LOAD DATA below can read a CSV straight into it.", "flag": false, "tag": ""}, {"title": "Load from a CSV file", "start": 19, "end": 19, "text": "LOAD DATA LOCAL INPATH '/path/to/sales.csv' INTO TABLE sales;", "note": "/path/to/sales.csv is a placeholder. LOCAL means the file is read from the machine you run the Hive client on, not from HDFS.", "flag": true, "tag": "Check"}, {"title": "Insert five sample rows", "start": 23, "end": 28, "text": "INSERT INTO sales VALUES\n  (1, 'Product1', 'John', 1000.0, 'Country1', 'State1', 'Visa'),\n  (2, 'Product2', 'Jane', 1500.0, 'Country2', 'State2', 'Mastercard'),\n  (3, 'Product3', 'Bob', 2000.0, 'Country1', 'State3', 'Visa'),\n  (4, 'Product4', 'Alice', 2500.0, 'Country3', 'State4', 'Visa'),\n  (5, 'Product5', 'Mike', 3000.0, 'Country2', 'State5', 'Mastercard');", "note": "INSERT ... VALUES works in Hive 0.14 and later. The data is placeholder (Product1, Country1, State1 ...), not real sales.", "flag": false, "tag": ""}, {"title": "Sales per country", "start": 34, "end": 36, "text": "SELECT country, COUNT(*) AS sales_count\nFROM sales\nGROUP BY country;", "note": "Result on the sample rows: Country1 2, Country2 2, Country3 1.", "flag": false, "tag": ""}, {"title": "Sales per state", "start": 41, "end": 43, "text": "SELECT state, COUNT(*) AS sales_count\nFROM sales\nGROUP BY state;", "note": "Every state appears once on the sample rows, so each count is 1.", "flag": false, "tag": ""}, {"title": "Names per product (GROUP_CONCAT)", "start": 48, "end": 50, "text": "SELECT product, GROUP_CONCAT(name) AS names\nFROM sales\nGROUP BY product;", "note": "GROUP_CONCAT is a MySQL function; Hive does not have it. The Hive form is concat_ws(',', collect_list(name)). On the sample rows every product has one row, so the output would be the five names.", "flag": true, "tag": "Check"}, {"title": "View: Visa transactions", "start": 54, "end": 57, "text": "CREATE VIEW visa_transactions AS\nSELECT *\nFROM sales\nWHERE card_type = 'Visa';", "note": "A view stores the query, not the rows. On the sample rows it returns transactions 1, 3 and 4.", "flag": false, "tag": ""}, {"title": "View: Mastercard transactions", "start": 64, "end": 67, "text": "CREATE VIEW mastercard_transactions AS\nSELECT *\nFROM sales\nWHERE card_type = 'Mastercard';", "note": "Returns transactions 2 and 5 on the sample rows.", "flag": false, "tag": ""}, {"title": "Filter by state", "start": 71, "end": 73, "text": "SELECT *\nFROM sales\nWHERE state = 'Seattle';", "note": "No sample row has state Seattle (the states are State1 to State5), so the result is empty.", "flag": false, "tag": ""}, {"title": "Maximum transaction id for Ontario", "start": 78, "end": 80, "text": "SELECT state, MAX(transaction_id) AS max_transactions\nFROM sales\nWHERE state = 'Ontario';", "note": "This selects the column state next to MAX() without a GROUP BY, which Hive rejects (a non-aggregated column must appear in GROUP BY). Even when fixed, no sample row has state Ontario, so the answer would be empty.", "flag": true, "tag": "Check"}]}, {"name": "mongodb.txt", "kind": "MongoDB shell commands", "total": 224, "summary": "Commands against an Employee collection: queries, a delete, bulk updates, an aggregation and a map-reduce, then the insertMany that creates the 16 sample employees, then a second map-reduce on a different collection. The file lists the queries before the data is inserted, so read it as notes, not as a script to paste top to bottom. The Query lab tab runs the Employee commands on the embedded 16 documents.", "sections": [{"title": "Find by a nested field", "start": 1, "end": 1, "text": "db.Employee.find({ \"Name.middlename\": \"Kumar\" })", "note": "Dot notation reaches into the Name sub-document. All 16 sample employees have middle name Kumar.", "flag": false, "tag": ""}, {"title": "Range on salary", "start": 3, "end": 3, "text": "db.Employee.find({ \"Salary in INR\": { $gt: 20000, $lt: 35000 } })", "note": "$gt and $lt are both exclusive: salary above 20000 and below 35000.", "flag": false, "tag": ""}, {"title": "Count by role", "start": 5, "end": 5, "text": "db.Employee.countDocuments({ Role: \"Manager\" })", "note": "Role is an array, and matching a single value against an array matches any element, so employees with two roles are counted too.", "flag": false, "tag": ""}, {"title": "Delete one document", "start": 7, "end": 7, "text": "db.Employee.deleteOne({ \"Name.Firstname\": \"Rajesh\", Designation: \"Scientist\" })", "note": "Deletes the first match only. No sample employee is named Rajesh or has Designation Scientist, so on this data nothing is deleted.", "flag": false, "tag": ""}, {"title": "Combined conditions", "start": 9, "end": 9, "text": "db.Employee.find({ Age: { $lt: 35 }, \"Salary in INR\": { $gte: 30000, $lt: 35000 } })", "note": "Several conditions in one filter are ANDed: age under 35 and salary from 30000 up to (not including) 35000.", "flag": false, "tag": ""}, {"title": "Update many", "start": 11, "end": 11, "text": "db.Employee.updateMany({ Role: \"Team Lead\" }, { $set: { \"Salary in INR\": 55650 } })", "note": "Sets the salary of everyone whose Role contains Team Lead to 55650.", "flag": false, "tag": ""}, {"title": "Aggregate: average salary per age", "start": 13, "end": 15, "text": "db.Employee.aggregate([\n  { $group: { _id: \"$Age\", averageSalary: { $avg: \"$Salary in INR\" } } }\n])", "note": "Groups by age and averages the salary. The output order of $group is not defined; the Query lab sorts by age.", "flag": false, "tag": ""}, {"title": "Map-reduce: average salary per age", "start": 17, "end": 25, "text": "var mapFunction = function () {\n  emit(this.Age, this[\"Salary in INR\"]);\n};\n\nvar reduceFunction = function (key, values) {\n  return Array.avg(values);\n};\n\ndb.Employee.mapReduce(mapFunction, reduceFunction, { out: \"employee_average_salary\" })", "note": "Array.avg is a helper from the old mongo shell and is not a standard JavaScript function. Returning an average from a reducer is only safe when reduce runs once per key, because MongoDB may call reduce again on partial results, and an average of averages is wrong when groups differ in size. Map-reduce itself is deprecated since MongoDB 5.0 in favour of aggregation.", "flag": true, "tag": "Check"}, {"title": "insertMany: the 16 sample employees", "start": 29, "end": 206, "text": "db.Employee.insertMany([\n  {\n    \"Name\": {\n      \"Firstname\": \"John\",\n      \"middlename\": \"Kumar\",\n      \"lastname\": \"Smith\"\n    },\n    \"Age\": 30,\n    \"Salary in INR\": 25000,\n    \"Designation\": \"Employee\",\n    \"Role\": [\"Manager\", \"Software Developer\"]\n  },\n  {\n    \"Name\": {\n      \"Firstname\": \"Emma\",\n      \"middlename\": \"Kumar\",\n      \"lastname\": \"Johnson\"\n    },\n    \"Age\": 35,\n    \"Salary in INR\": 30000,\n    \"Designation\": \"Employee\",\n    \"Role\": [\"Team Lead\", \"Software Developer\"]\n  },\n  {\n    \"Name\": {\n      \"Firstname\": \"Michael\",\n      \"middlename\": \"Kumar\",\n      \"lastname\": \"Brown\"\n    },\n    \"Age\": 28,\n    \"Salary in INR\": 28000,\n    \"Designation\": \"Employee\",\n    \"Role\": [\"Software Developer\"]\n  },\n  {\n    \"Name\": {\n      \"Firstname\": \"Sophia\",\n      \"middlename\": \"Kumar\",\n      \"lastname\": \"Davis\"\n    },\n    \"Age\": 32,\n    \"Salary in INR\": 32000,\n    \"Designation\": \"Employee\",\n    \"Role\": [\"Tester\", \"UI Designer\"]\n  },\n  {\n    \"Name\": {\n      \"Firstname\": \"Daniel\",\n      \"middlename\": \"Kumar\",\n      \"lastname\": \"Wilson\"\n    },\n    \"Age\": 27,\n    \"Salary in INR\": 22000,\n    \"Designation\": \"Employee\",\n    \"Role\": [\"Software Developer\"]\n  },\n  {\n    \"Name\": {\n      \"Firstname\": \"Olivia\",\n      \"middlename\": \"Kumar\",\n      \"lastname\": \"Martinez\"\n    },\n    \"Age\": 29,\n    \"Salary in INR\": 27000,\n    \"Designation\": \"Employee\",\n    \"Role\": [\"Software Developer\"]\n  },\n  {\n    \"Name\": {\n      \"Firstname\": \"Alexander\",\n      \"middlename\": \"Kumar\",\n      \"lastname\": \"Taylor\"\n    },\n    \"Age\": 33,\n    \"Salary in INR\": 34000,\n    \"Designation\": \"Employee\",\n    \"Role\": [\"Manager\", \"UI Designer\"]\n  },\n  {\n    \"Name\": {\n      \"Firstname\": \"Ava\",\n      \"middlename\": \"Kumar\",\n      \"lastname\": \"Anderson\"\n    },\n    \"Age\": 31,\n    \"Salary in INR\": 31000,\n    \"Designation\": \"Employee\",\n    \"Role\": [\"Tester\"]\n  },\n  {\n    \"Name\": {\n      \"Firstname\": \"William\",\n      \"middlename\": \"Kumar\",\n      \"lastname\": \"Thomas\"\n    },\n    \"Age\": 26,\n    \"Salary in INR\": 23000,\n    \"Designation\": \"Employee\",\n    \"Role\": [\"Software Developer\"]\n  },\n  {\n    \"Name\": {\n      \"Firstname\": \"Mia\",\n      \"middlename\": \"Kumar\",\n      \"lastname\": \"Rodriguez\"\n    },\n    \"Age\": 34,\n    \"Salary in INR\": 33000,\n    \"Designation\": \"Employee\",\n    \"Role\": [\"Manager\", \"Team Lead\"]\n  },\n  {\n    \"Name\": {\n      \"Firstname\": \"James\",\n      \"middlename\": \"Kumar\",\n      \"lastname\": \"Lopez\"\n       },\n    \"Age\": 30,\n    \"Salary in INR\": 25000,\n    \"Designation\": \"Employee\",\n    \"Role\": [\"Software Developer\"]\n  },\n  {\n    \"Name\": {\n      \"Firstname\": \"Isabella\",\n      \"middlename\": \"Kumar\",\n      \"lastname\": \"Lee\"\n    },\n    \"Age\": 27,\n    \"Salary in INR\": 22000,\n    \"Designation\": \"Employee\",\n    \"Role\": [\"Software Developer\"]\n  },\n  {\n    \"Name\": {\n      \"Firstname\": \"Benjamin\",\n      \"middlename\": \"Kumar\",\n      \"lastname\": \"Harris\"\n    },\n    \"Age\": 31,\n    \"Salary in INR\": 31000,\n    \"Designation\": \"Employee\",\n    \"Role\": [\"UI Designer\"]\n  },\n  {\n    \"Name\": {\n      \"Firstname\": \"Charlotte\",\n      \"middlename\": \"Kumar\",\n      \"lastname\": \"Clark\"\n    },\n    \"Age\": 29,\n    \"Salary in INR\": 27000,\n    \"Designation\": \"Employee\",\n    \"Role\": [\"Software Developer\"]\n  },\n  {\n    \"Name\": {\n      \"Firstname\": \"Henry\",\n      \"middlename\": \"Kumar\",\n      \"lastname\": \"Lewis\"\n    },\n    \"Age\": 32,\n    \"Salary in INR\": 32000,\n    \"Designation\": \"Employee\",\n    \"Role\": [\"Tester\"]\n  },\n  {\n    \"Name\": {\n      \"Firstname\": \"Liam\",\n      \"middlename\": \"Kumar\",\n      \"lastname\": \"Wright\"\n    },\n    \"Age\": 28,\n    \"Salary in INR\": 28000,\n    \"Designation\": \"Employee\",\n    \"Role\": [\"Software Developer\"]\n  }\n]);", "note": "The data used by every command above and below. It sits after the queries in the file, so insert it first when you try the commands.", "flag": false, "tag": ""}, {"title": "Update with $in", "start": 209, "end": 209, "text": "db.Employee.updateMany({ Role: { $in: [\"Team Lead\"] } }, { $set: { \"Salary in INR\": 55650 } })", "note": "Same effect as the earlier updateMany on Role \"Team Lead\": a one-element $in behaves like a plain equality on an array field.", "flag": false, "tag": ""}, {"title": "Map-reduce on another collection (Sta)", "start": 212, "end": 224, "text": "var mapFunction = function () {\n  var totalAmount = 0;\n  for (var i = 0; i < this.Department.length; i++) {\n    totalAmount += this.Salary[i];\n  }\n  emit(this.Name, totalAmount);\n};\n\nvar reduceFunction = function (key, values) {\n  return Array.sum(values);\n};\n\ndb.Sta.mapReduce(mapFunction, reduceFunction, { out: \"sta_jobs_earnings\" })", "note": "Runs on db.Sta using fields Department and Salary (arrays) that do not exist in the Employee data, and no Sta data is in the repository, so this cannot be run from these notes. It also emits this.Name, which here would be an object.", "flag": true, "tag": "Check"}]}, {"name": "explicit.txt", "kind": "Android: dialer app", "total": 66, "summary": "An Android app with one text box and a button. The button builds an Intent with Intent.ACTION_DIAL and a tel: URI and starts it, which opens the phone dialer with the number filled in. Despite the file name, this is an IMPLICIT intent: it names an action and data, not a class, and Android picks the app that handles it. The file implicit.txt contains the explicit one; the two names look swapped.", "sections": [{"title": "Manifest permission", "start": 1, "end": 1, "text": "<uses-permission android:name=\"android.permission.CALL_PHONE\">", "note": "The tag is not closed (it needs /> at the end). Also, ACTION_DIAL only opens the dialer and does not need CALL_PHONE; that permission is for ACTION_CALL, which dials without the user pressing call.", "flag": true, "tag": "Check"}, {"title": "MainActivity.java", "start": 3, "end": 39, "text": "MainActivity.java\n\npackage com.example.expl;\n\nimport androidx.appcompat.app.AppCompatActivity;\n\nimport android.annotation.SuppressLint;\nimport android.content.Intent;\nimport android.net.Uri;\nimport android.os.Bundle;\nimport android.view.View;\nimport android.widget.Button;\nimport android.widget.EditText;\n\npublic class MainActivity extends AppCompatActivity {\n    EditText phone;\n    Button call;\n    @SuppressLint(\"MissingInflatedId\")\n    @Override\n    protected void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        setContentView(R.layout.activity_main);\n        call=findViewById(R.id.call);\n        phone=findViewById(R.id.phone);\n\n        call.setOnClickListener(new View.OnClickListener() {\n            @Override\n            public void onClick(View view) {\n                Uri myuri = Uri.parse(\"tel:\"+phone.getText().toString());\n                Intent it=new Intent(Intent.ACTION_DIAL,myuri);\n                startActivity(it);\n            }\n        });\n    }\n\n\n}", "note": "On click: Uri.parse(\"tel:\" + number), then new Intent(Intent.ACTION_DIAL, uri) and startActivity. No target class is given, which is what makes it implicit.", "flag": true, "tag": "Check"}, {"title": "Layout (activity.xml)", "start": 42, "end": 66, "text": "activity.xml\n\n<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<LinearLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    xmlns:app=\"http://schemas.android.com/apk/res-auto\"\n    xmlns:tools=\"http://schemas.android.com/tools\"\n    android:layout_width=\"match_parent\"\n    android:layout_height=\"match_parent\"\n    android:orientation=\"vertical\"\n    tools:context=\".MainActivity\">\n\n    <EditText\n        android:id=\"@+id/phone\"\n        android:layout_width=\"match_parent\"\n        android:layout_height=\"wrap_content\"\n        android:ems=\"10\"\n        android:inputType=\"text\"\n        android:text=\"Name\" />\n\n    <Button\n        android:id=\"@+id/call\"\n        android:layout_width=\"match_parent\"\n        android:layout_height=\"wrap_content\"\n        android:text=\"Button\" />\n<\/LinearLayout>", "note": "A vertical LinearLayout with an EditText (id phone, default text \"Name\") and a Button (id call). The box is named phone but its default text and inputType are \"Name\" and text.", "flag": false, "tag": ""}]}, {"name": "implicit.txt", "kind": "Android: two-screen app", "total": 108, "summary": "An Android app with two screens. The first has a text box and a button; the button builds new Intent(MainActivity.this, MainActivity2.class), puts the typed text in a Bundle and starts the second screen, which shows it in a large TextView. Naming the target class makes this an EXPLICIT intent, although the file is called implicit. The file explicit.txt contains the implicit one; the two names look swapped.", "sections": [{"title": "MainActivity.java (screen one)", "start": 1, "end": 30, "text": "import androidx.appcompat.app.AppCompatActivity;\n\nimport android.content.Intent;\nimport android.os.Bundle;\nimport android.view.View;\nimport android.widget.Button;\nimport android.widget.EditText;\n\npublic class MainActivity extends AppCompatActivity {\n\n    Button click;\n    EditText name;\n    @Override\n    protected void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        setContentView(R.layout.activity_main);\n        name=findViewById(R.id.name);\n        click=findViewById(R.id.click);\n        click.setOnClickListener(new View.OnClickListener() {\n            @Override\n            public void onClick(View view) {\n                Intent it=new Intent(MainActivity.this,MainActivity2.class);\n                Bundle b=new Bundle();\n                b.putString(\"name\",name.getText().toString());\n                it.putExtras(b);\n                startActivity(it);\n            }\n        });\n    }\n}", "note": "The intent names MainActivity2.class directly, so it is explicit. The text goes across as a String extra with the key \"name\". The file starts without a package line, as pasted.", "flag": true, "tag": "Check"}, {"title": "MainActivity2.java (screen two)", "start": 33, "end": 53, "text": "MainActivity2.java\n\nimport androidx.appcompat.app.AppCompatActivity;\n\nimport android.os.Bundle;\nimport android.widget.TextView;\n\npublic class MainActivity2 extends AppCompatActivity {\n\n    TextView txt;\n    String first=\" \";\n    @Override\n    protected void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        setContentView(R.layout.activity_main2);\n\n        txt=findViewById(R.id.txt);\n        first= getIntent().getStringExtra(\"name\");\n        txt.setText(first);\n    }\n}", "note": "Reads the extra with getIntent().getStringExtra(\"name\") and shows it in the TextView.", "flag": false, "tag": ""}, {"title": "Layout of screen one (activity1.xml)", "start": 56, "end": 84, "text": "activity1.xml\n\n<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<LinearLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    xmlns:app=\"http://schemas.android.com/apk/res-auto\"\n    xmlns:tools=\"http://schemas.android.com/tools\"\n    android:layout_width=\"match_parent\"\n    android:layout_height=\"match_parent\"\n    android:orientation=\"vertical\"\n    tools:context=\".MainActivity\">\n\n\n\n    <EditText\n        android:id=\"@+id/name\"\n        android:layout_width=\"match_parent\"\n        android:layout_height=\"wrap_content\"\n        android:ems=\"10\"\n        android:inputType=\"text\"\n        android:gravity=\"center\"\n        android:text=\"Name\" />\n\n    <Button\n        android:id=\"@+id/click\"\n        android:layout_width=\"match_parent\"\n        android:layout_height=\"wrap_content\"\n        android:text=\"Click\" />\n\n<\/LinearLayout>", "note": "EditText (id name, centred, default text \"Name\") and a Button (id click, text \"Click\").", "flag": false, "tag": ""}, {"title": "Layout of screen two (activity2.xml)", "start": 88, "end": 108, "text": "activity2.xml\n\n<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<LinearLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    xmlns:app=\"http://schemas.android.com/apk/res-auto\"\n    xmlns:tools=\"http://schemas.android.com/tools\"\n    android:layout_width=\"match_parent\"\n    android:layout_height=\"match_parent\"\n    android:orientation=\"vertical\"\n    tools:context=\".MainActivity2\">\n\n\n\n    <TextView\n        android:id=\"@+id/txt\"\n        android:layout_width=\"match_parent\"\n        android:layout_height=\"wrap_content\"\n        android:text=\"TextView\"\n        android:gravity=\"center\"\n        android:textSize=\"40dp\"/>\n<\/LinearLayout>", "note": "A single centred TextView (id txt) at 40dp. The code refers to R.layout.activity_main and activity_main2, so the real layout files would need those names rather than activity1/activity2.", "flag": false, "tag": ""}]}], "mongo": [{"Name": {"Firstname": "John", "middlename": "Kumar", "lastname": "Smith"}, "Age": 30, "Salary in INR": 25000, "Designation": "Employee", "Role": ["Manager", "Software Developer"]}, {"Name": {"Firstname": "Emma", "middlename": "Kumar", "lastname": "Johnson"}, "Age": 35, "Salary in INR": 30000, "Designation": "Employee", "Role": ["Team Lead", "Software Developer"]}, {"Name": {"Firstname": "Michael", "middlename": "Kumar", "lastname": "Brown"}, "Age": 28, "Salary in INR": 28000, "Designation": "Employee", "Role": ["Software Developer"]}, {"Name": {"Firstname": "Sophia", "middlename": "Kumar", "lastname": "Davis"}, "Age": 32, "Salary in INR": 32000, "Designation": "Employee", "Role": ["Tester", "UI Designer"]}, {"Name": {"Firstname": "Daniel", "middlename": "Kumar", "lastname": "Wilson"}, "Age": 27, "Salary in INR": 22000, "Designation": "Employee", "Role": ["Software Developer"]}, {"Name": {"Firstname": "Olivia", "middlename": "Kumar", "lastname": "Martinez"}, "Age": 29, "Salary in INR": 27000, "Designation": "Employee", "Role": ["Software Developer"]}, {"Name": {"Firstname": "Alexander", "middlename": "Kumar", "lastname": "Taylor"}, "Age": 33, "Salary in INR": 34000, "Designation": "Employee", "Role": ["Manager", "UI Designer"]}, {"Name": {"Firstname": "Ava", "middlename": "Kumar", "lastname": "Anderson"}, "Age": 31, "Salary in INR": 31000, "Designation": "Employee", "Role": ["Tester"]}, {"Name": {"Firstname": "William", "middlename": "Kumar", "lastname": "Thomas"}, "Age": 26, "Salary in INR": 23000, "Designation": "Employee", "Role": ["Software Developer"]}, {"Name": {"Firstname": "Mia", "middlename": "Kumar", "lastname": "Rodriguez"}, "Age": 34, "Salary in INR": 33000, "Designation": "Employee", "Role": ["Manager", "Team Lead"]}, {"Name": {"Firstname": "James", "middlename": "Kumar", "lastname": "Lopez"}, "Age": 30, "Salary in INR": 25000, "Designation": "Employee", "Role": ["Software Developer"]}, {"Name": {"Firstname": "Isabella", "middlename": "Kumar", "lastname": "Lee"}, "Age": 27, "Salary in INR": 22000, "Designation": "Employee", "Role": ["Software Developer"]}, {"Name": {"Firstname": "Benjamin", "middlename": "Kumar", "lastname": "Harris"}, "Age": 31, "Salary in INR": 31000, "Designation": "Employee", "Role": ["UI Designer"]}, {"Name": {"Firstname": "Charlotte", "middlename": "Kumar", "lastname": "Clark"}, "Age": 29, "Salary in INR": 27000, "Designation": "Employee", "Role": ["Software Developer"]}, {"Name": {"Firstname": "Henry", "middlename": "Kumar", "lastname": "Lewis"}, "Age": 32, "Salary in INR": 32000, "Designation": "Employee", "Role": ["Tester"]}, {"Name": {"Firstname": "Liam", "middlename": "Kumar", "lastname": "Wright"}, "Age": 28, "Salary in INR": 28000, "Designation": "Employee", "Role": ["Software Developer"]}], "hive": [{"id": 1, "product": "Product1", "name": "John", "price": 1000.0, "country": "Country1", "state": "State1", "card": "Visa"}, {"id": 2, "product": "Product2", "name": "Jane", "price": 1500.0, "country": "Country2", "state": "State2", "card": "Mastercard"}, {"id": 3, "product": "Product3", "name": "Bob", "price": 2000.0, "country": "Country1", "state": "State3", "card": "Visa"}, {"id": 4, "product": "Product4", "name": "Alice", "price": 2500.0, "country": "Country3", "state": "State4", "card": "Visa"}, {"id": 5, "product": "Product5", "name": "Mike", "price": 3000.0, "country": "Country2", "state": "State5", "card": "Mastercard"}], "recorded": [["abc", "2"], ["def", "3"], ["ghi", "2"], ["klm", "1"], ["mno", "1"]], "mcmds": {"find_middle": "db.Employee.find({ \"Name.middlename\": \"Kumar\" })", "range": "db.Employee.find({ \"Salary in INR\": { $gt: 20000, $lt: 35000 } })", "count": "db.Employee.countDocuments({ Role: \"Manager\" })", "delete": "db.Employee.deleteOne({ \"Name.Firstname\": \"Rajesh\", Designation: \"Scientist\" })", "combined": "db.Employee.find({ Age: { $lt: 35 }, \"Salary in INR\": { $gte: 30000, $lt: 35000 } })", "update": "db.Employee.updateMany({ Role: \"Team Lead\" }, { $set: { \"Salary in INR\": 55650 } })", "aggregate": "db.Employee.aggregate([\n  { $group: { _id: \"$Age\", averageSalary: { $avg: \"$Salary in INR\" } } }\n])", "mapreduce": "var mapFunction = function () {\n  emit(this.Age, this[\"Salary in INR\"]);\n};\n\nvar reduceFunction = function (key, values) {\n  return Array.avg(values);\n};\n\ndb.Employee.mapReduce(mapFunction, reduceFunction, { out: \"employee_average_salary\" })", "update_in": "db.Employee.updateMany({ Role: { $in: [\"Team Lead\"] } }, { $set: { \"Salary in INR\": 55650 } })", "sta": "var mapFunction = function () {\n  var totalAmount = 0;\n  for (var i = 0; i < this.Department.length; i++) {\n    totalAmount += this.Salary[i];\n  }\n  emit(this.Name, totalAmount);\n};\n\nvar reduceFunction = function (key, values) {\n  return Array.sum(values);\n};\n\ndb.Sta.mapReduce(mapFunction, reduceFunction, { out: \"sta_jobs_earnings\" })"}, "hcmds": {"country": "SELECT country, COUNT(*) AS sales_count\nFROM sales\nGROUP BY country;", "state": "SELECT state, COUNT(*) AS sales_count\nFROM sales\nGROUP BY state;", "concat": "SELECT product, GROUP_CONCAT(name) AS names\nFROM sales\nGROUP BY product;", "visa": "CREATE VIEW visa_transactions AS\nSELECT *\nFROM sales\nWHERE card_type = 'Visa';", "master": "CREATE VIEW mastercard_transactions AS\nSELECT *\nFROM sales\nWHERE card_type = 'Mastercard';", "seattle": "SELECT *\nFROM sales\nWHERE state = 'Seattle';", "maxont": "SELECT state, MAX(transaction_id) AS max_transactions\nFROM sales\nWHERE state = 'Ontario';"}};
+
+(function(){
+"use strict";
+var $ = function(id){ return document.getElementById(id); };
+function el(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+/* ---------- tabs ---------- */
+var tabBtns = document.querySelectorAll('nav [data-tab]');
+function showTab(name){
+  tabBtns.forEach(function(b){ b.setAttribute('aria-selected', b.dataset.tab === name ? 'true' : 'false'); });
+  document.querySelectorAll('.exp').forEach(function(s){ s.classList.toggle('on', s.id === name); });
+  if (history.replaceState) history.replaceState(null, '', '#' + name);
+}
+tabBtns.forEach(function(b){ b.addEventListener('click', function(){ showTab(b.dataset.tab); }); });
+
+/* ---------- notes explorer ---------- */
+var curFile = 0;
+var filesBox = $('files'), secs = $('secs'), search = $('search');
+DATA.files.forEach(function(f, i){
+  var b = el('button', 'btn', f.name); b.type = 'button'; b.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
+  b.addEventListener('click', function(){ search.value = ''; curFile = i; renderNotes(); });
+  filesBox.appendChild(b);
+});
+function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function highlight(node, text, term){
+  node.textContent = '';
+  if (!term) { node.textContent = text; return; }
+  var re = new RegExp(esc(term), 'ig'), last = 0, m;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) node.appendChild(document.createTextNode(text.slice(last, m.index)));
+    var mk = document.createElement('mark'); mk.textContent = m[0]; node.appendChild(mk);
+    last = m.index + m[0].length;
+    if (m[0].length === 0) re.lastIndex++;
+  }
+  if (last < text.length) node.appendChild(document.createTextNode(text.slice(last)));
+}
+function renderNotes(){
+  var term = search.value.trim();
+  Array.prototype.forEach.call(filesBox.children, function(b, i){ b.setAttribute('aria-pressed', (!term && i === curFile) ? 'true' : 'false'); });
+  secs.innerHTML = '';
+  var shown = 0, list = [];
+  DATA.files.forEach(function(f, fi){
+    if (!term && fi !== curFile) return;
+    f.sections.forEach(function(s){
+      var hay = (s.title + '\n' + s.text + '\n' + s.note).toLowerCase();
+      if (!term || hay.indexOf(term.toLowerCase()) !== -1) list.push([f, s]);
+    });
+  });
+  if (!term) {
+    var f0 = DATA.files[curFile];
+    $('fsum').textContent = f0.kind + ' · ' + f0.total + ' lines. ' + f0.summary;
+    $('searchinfo').textContent = '';
+  } else {
+    $('fsum').textContent = '';
+    $('searchinfo').textContent = list.length + ' matching part' + (list.length === 1 ? '' : 's') + ' across six files.';
+  }
+  list.forEach(function(pair){
+    var f = pair[0], s = pair[1];
+    var box = el('div', 'sec');
+    var left = el('div'), right = el('div');
+    var h = el('h3'); highlight(h, s.title, term);
+    if (s.flag) h.appendChild(el('span', 'badge', s.tag || 'Check'));
+    var meta = el('div', 'meta');
+    if (term) meta.appendChild(el('span', 'ftag', f.name));
+    meta.appendChild(document.createTextNode('lines ' + s.start + (s.end !== s.start ? '–' + s.end : '')));
+    var p = el('p'); highlight(p, s.note, term);
+    left.appendChild(h); left.appendChild(meta); left.appendChild(p);
+    var pre = el('pre'); highlight(pre, s.text, term); pre.tabIndex = 0;
+    pre.setAttribute('aria-label', 'Source ' + f.name + ' lines ' + s.start + ' to ' + s.end);
+    right.appendChild(pre);
+    box.appendChild(left); box.appendChild(right);
+    secs.appendChild(box);
+    shown++;
+  });
+  if (!shown) secs.appendChild(el('p', 'hint', 'No part of any file contains that text.'));
+}
+search.addEventListener('input', renderNotes);
+renderNotes();
+
+/* ---------- word count ---------- */
+var SAMPLE = 'abc def ghi\ndef klm abc\nmno ghi def';
+var enc = new TextEncoder();
+function byteCmp(a, b){
+  var x = enc.encode(a), y = enc.encode(b), n = Math.min(x.length, y.length);
+  for (var i = 0; i < n; i++) if (x[i] !== y[i]) return x[i] - y[i];
+  return x.length - y.length;
+}
+function tokenize(line, norm){
+  if (norm) line = line.toLowerCase().replace(/[^\p{L}\p{N}'\s]/gu, ' ');
+  return line.split(/[ \t\n\r\f]+/).filter(function(w){ return w.length > 0; });
+}
+function runJob(text, nMappers, useComb, norm){
+  var lines = text.split('\n'); if (lines.length && lines[lines.length - 1] === '') lines.pop();
+  // byte offsets, as TextInputFormat keys
+  var off = 0, recs = lines.map(function(l){ var r = {off: off, line: l}; off += enc.encode(l).length + 1; return r; });
+  var per = Math.max(1, Math.ceil(recs.length / nMappers)), maps = [];
+  for (var m = 0; m < nMappers; m++) {
+    var part = recs.slice(m * per, (m + 1) * per), emitted = [];
+    part.forEach(function(r){ tokenize(r.line, norm).forEach(function(w){ emitted.push([w, 1]); }); });
+    var combined = null;
+    if (useComb) {
+      var cm = {};
+      emitted.forEach(function(p){ cm[p[0]] = (cm[p[0]] || 0) + p[1]; });
+      combined = Object.keys(cm).sort(byteCmp).map(function(k){ return [k, cm[k]]; });
+    }
+    maps.push({recs: part, emitted: emitted, combined: combined});
+  }
+  var groups = {}, shuffled = 0;
+  maps.forEach(function(mp){ (mp.combined || mp.emitted).forEach(function(p){ (groups[p[0]] = groups[p[0]] || []).push(p[1]); shuffled++; }); });
+  var keys = Object.keys(groups).sort(byteCmp);
+  var shuf = keys.map(function(k){ return [k, groups[k]]; });
+  var out = shuf.map(function(g){ return [g[0], g[1].reduce(function(a, b){ return a + b; }, 0)]; });
+  return {lines: lines.length, maps: maps, shuf: shuf, out: out, emitted: maps.reduce(function(a, m){ return a + m.emitted.length; }, 0), shuffled: shuffled};
+}
+window.__runJob = runJob;  // used by the verification script
+
+var STAGES = ['Input splits', 'Map', 'Combine', 'Shuffle and sort', 'Reduce'];
+var stage = 1, lastJob = null;
+var stepsBox = $('steps');
+STAGES.forEach(function(name, i){
+  var b = el('button', 'btn', (i + 1) + '. ' + name); b.type = 'button'; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', i === stage ? 'true' : 'false');
+  b.addEventListener('click', function(){ stage = i; renderStage(); });
+  stepsBox.appendChild(b);
+});
+function pairChips(parent, arr, cap){
+  arr.slice(0, cap).forEach(function(p){ var c = el('span', 'pair'); c.appendChild(document.createTextNode(p[0] + ', ')); c.appendChild(el('b', null, String(p[1]))); parent.appendChild(c); });
+  if (arr.length > cap) parent.appendChild(el('span', 'off', '+ ' + (arr.length - cap) + ' more'));
+}
+function renderStage(){
+  Array.prototype.forEach.call(stepsBox.children, function(b, i){ b.setAttribute('aria-selected', i === stage ? 'true' : 'false'); });
+  var box = $('wcstage'); box.innerHTML = '';
+  var j = lastJob;
+  box.appendChild(el('div', 'stagehead', (stage + 1) + '. ' + STAGES[stage]));
+  if (stage === 0) {
+    box.appendChild(el('p', 'hint', 'Each line is one record. The key is the byte offset of the line in the file; the mapper ignores it.'));
+    var g = el('div', 'mappers');
+    j.maps.forEach(function(m, i){
+      var c = el('div', 'mapper'); c.appendChild(el('h4', null, 'Mapper ' + (i + 1) + ' · ' + m.recs.length + ' line' + (m.recs.length === 1 ? '' : 's')));
+      if (!m.recs.length) c.appendChild(el('span', 'off', 'no input'));
+      m.recs.forEach(function(r){ var p = el('p', 'line'); p.appendChild(el('span', 'off', String(r.off))); p.appendChild(document.createTextNode(r.line)); c.appendChild(p); });
+      g.appendChild(c);
+    });
+    box.appendChild(g);
+  } else if (stage === 1) {
+    box.appendChild(el('p', 'hint', 'Map splits each line into words and emits (word, 1) for every one, in the order the words appear.'));
+    var g1 = el('div', 'mappers');
+    j.maps.forEach(function(m, i){
+      var c = el('div', 'mapper'); c.appendChild(el('h4', null, 'Mapper ' + (i + 1) + ' · ' + m.emitted.length + ' pairs'));
+      pairChips(c, m.emitted, 120); g1.appendChild(c);
+    });
+    box.appendChild(g1);
+  } else if (stage === 2) {
+    if (!$('wccomb').checked) { box.appendChild(el('p', 'hint', 'Combiner is switched off, so every mapper sends its pairs on unchanged.')); }
+    else {
+      box.appendChild(el('p', 'hint', 'The combiner (the Reduce class) adds up each mapper\'s own pairs, sorted by word, before anything is sent.'));
+      var g2 = el('div', 'mappers');
+      j.maps.forEach(function(m, i){
+        var c = el('div', 'mapper'); c.appendChild(el('h4', null, 'Mapper ' + (i + 1) + ' · ' + m.combined.length + ' pairs'));
+        pairChips(c, m.combined, 120); g2.appendChild(c);
+      });
+      box.appendChild(g2);
+    }
+  } else if (stage === 3) {
+    box.appendChild(el('p', 'hint', 'The framework gathers every pair, sorts by word (by UTF-8 bytes, so capitals come before lower-case) and hands each word its list of counts.'));
+    var t = el('table'); var th = el('thead'); var tr = el('tr'); ['Word', 'Counts received'].forEach(function(h){ tr.appendChild(el('th', null, h)); }); th.appendChild(tr); t.appendChild(th);
+    var tb = el('tbody');
+    j.shuf.slice(0, 200).forEach(function(g){ var r = el('tr'); r.appendChild(el('td', 'num', g[0])); r.appendChild(el('td', 'num', '[' + g[1].join(', ') + ']')); tb.appendChild(r); });
+    t.appendChild(tb); var w = el('div', 'table-wrap'); w.appendChild(t); box.appendChild(w);
+    if (j.shuf.length > 200) box.appendChild(el('p', 'hint', '+ ' + (j.shuf.length - 200) + ' more words'));
+  } else {
+    box.appendChild(el('p', 'hint', 'Reduce adds the counts for each word. The job writes one "word<TAB>count" line per word, which is what hdfs dfs -cat /g1output/p* printed.'));
+    var max = j.out.reduce(function(a, p){ return Math.max(a, p[1]); }, 1);
+    var t2 = el('table'); var th2 = el('thead'); var tr2 = el('tr'); ['Word', 'Count', ''].forEach(function(h){ tr2.appendChild(el('th', null, h)); }); th2.appendChild(tr2); t2.appendChild(th2);
+    var tb2 = el('tbody');
+    j.out.slice(0, 200).forEach(function(p){
+      var r = el('tr'); r.appendChild(el('td', 'num', p[0])); r.appendChild(el('td', 'num', String(p[1])));
+      var td = el('td'); var bar = el('div', 'bar'); var bb = el('b'); bb.style.width = (100 * p[1] / max) + '%'; bar.appendChild(bb); td.appendChild(bar); r.appendChild(td); tb2.appendChild(r);
+    });
+    t2.appendChild(tb2); var w2 = el('div', 'table-wrap'); w2.appendChild(t2); box.appendChild(w2);
+    if (j.out.length > 200) box.appendChild(el('p', 'hint', '+ ' + (j.out.length - 200) + ' more words'));
+    var pre = el('pre'); pre.style.marginTop = '12px'; pre.id = 'wcout'; pre.textContent = j.out.map(function(p){ return p[0] + '\t' + p[1]; }).join('\n'); box.appendChild(pre);
+  }
+}
+function updateWC(){
+  var text = $('wctext').value;
+  if (text.length > 5000) { text = text.slice(0, 5000); $('wctext').value = text; }
+  lastJob = runJob(text, parseInt($('wcmap').value, 10), $('wccomb').checked, $('wcnorm').checked);
+  var j = lastJob;
+  $('r-lines').textContent = j.lines;
+  $('r-map').textContent = j.emitted;
+  $('r-comb').textContent = $('wccomb').checked ? j.maps.reduce(function(a, m){ return a + m.combined.length; }, 0) : 'off';
+  $('r-shuf').textContent = j.shuffled;
+  $('r-dist').textContent = j.out.length;
+  var rec = DATA.recorded.map(function(p){ return p[0] + '\t' + p[1]; }).join('\n');
+  var mine = j.out.map(function(p){ return p[0] + '\t' + p[1]; }).join('\n');
+  var m = $('r-match');
+  if (text.replace(/\n+$/, '') === SAMPLE && !$('wcnorm').checked) { m.textContent = mine === rec ? 'yes' : 'no'; m.className = mine === rec ? 'ok' : 'bad'; }
+  else { m.textContent = 'n/a'; m.className = ''; }
+  renderStage();
+}
+$('wctext').value = SAMPLE;
+$('wcsample').addEventListener('click', function(){ $('wctext').value = SAMPLE; $('wcnorm').checked = false; updateWC(); });
+['wctext'].forEach(function(id){ $(id).addEventListener('input', updateWC); });
+['wcmap', 'wccomb', 'wcnorm'].forEach(function(id){ $(id).addEventListener('change', updateWC); });
+updateWC();
+
+/* ---------- query lab ---------- */
+var SAL = 'Salary in INR';
+var db = 'mongo', docs = null, changed = {}, deleted = 0;
+function freshDocs(){ docs = DATA.mongo.map(function(d, i){ var c = JSON.parse(JSON.stringify(d)); c.__i = i; return c; }); changed = {}; }
+freshDocs();
+function getPath(d, p){ return p.split('.').reduce(function(o, k){ return o == null ? undefined : o[k]; }, d); }
+function arr(v){ return Array.isArray(v) ? v : [v]; }
+function opTest(op, fv, a){
+  var xs = arr(fv);
+  switch (op) {
+    case '$eq': return xs.some(function(x){ return x === a; });
+    case '$ne': return !xs.some(function(x){ return x === a; });
+    case '$gt': return xs.some(function(x){ return x > a; });
+    case '$gte': return xs.some(function(x){ return x >= a; });
+    case '$lt': return xs.some(function(x){ return x < a; });
+    case '$lte': return xs.some(function(x){ return x <= a; });
+    case '$in': return Array.isArray(a) && xs.some(function(x){ return a.indexOf(x) !== -1; });
+  }
+  throw new Error('Unsupported operator ' + op);
+}
+function matches(d, f){
+  return Object.keys(f).every(function(k){
+    var c = f[k], fv = getPath(d, k);
+    if (c !== null && typeof c === 'object' && !Array.isArray(c) && Object.keys(c).length && Object.keys(c).every(function(x){ return x.charAt(0) === '$'; }))
+      return Object.keys(c).every(function(op){ return opTest(op, fv, c[op]); });
+    return arr(fv).some(function(x){ return x === c; });
+  });
+}
+function fullName(d){ return d.Name.Firstname + ' ' + d.Name.lastname; }
+function mongoTable(list){
+  var t = el('table'), th = el('thead'), tr = el('tr');
+  ['Name', 'Age', SAL, 'Role'].forEach(function(h){ tr.appendChild(el('th', null, h)); }); th.appendChild(tr); t.appendChild(th);
+  var tb = el('tbody');
+  list.forEach(function(d){ var r = el('tr', changed[d.__i] ? 'chg' : ''); r.appendChild(el('td', null, fullName(d))); r.appendChild(el('td', 'num', String(d.Age))); r.appendChild(el('td', 'num', String(d[SAL]))); r.appendChild(el('td', null, d.Role.join(', '))); tb.appendChild(r); });
+  t.appendChild(tb); var w = el('div', 'table-wrap'); w.appendChild(t); return w;
+}
+function plainTable(cols, rows){
+  var t = el('table'), th = el('thead'), tr = el('tr');
+  cols.forEach(function(h){ tr.appendChild(el('th', null, h)); }); th.appendChild(tr); t.appendChild(th);
+  var tb = el('tbody');
+  rows.forEach(function(r){ var x = el('tr'); r.forEach(function(v){ x.appendChild(el('td', typeof v === 'number' ? 'num' : null, String(v))); }); tb.appendChild(x); });
+  t.appendChild(tb); var w = el('div', 'table-wrap'); w.appendChild(t); return w;
+}
+function avg(a){ return a.reduce(function(x, y){ return x + y; }, 0) / a.length; }
+function groupAvgByAge(){
+  var g = {}; docs.forEach(function(d){ (g[d.Age] = g[d.Age] || []).push(d[SAL]); });
+  return Object.keys(g).map(Number).sort(function(a, b){ return a - b; }).map(function(k){ return [k, g[k]]; });
+}
+var MPRESETS = [
+  ['find_middle', 'find: middle name Kumar', function(){ var r = docs.filter(function(d){ return matches(d, {'Name.middlename': 'Kumar'}); }); return {msg: r.length + ' document(s) matched.', table: mongoTable(r)}; }],
+  ['range', 'find: salary 20000 to 35000', function(){ var r = docs.filter(function(d){ return matches(d, {'Salary in INR': {$gt: 20000, $lt: 35000}}); }); return {msg: r.length + ' document(s) matched.', table: mongoTable(r)}; }],
+  ['count', 'countDocuments: Role Manager', function(){ var n = docs.filter(function(d){ return matches(d, {Role: 'Manager'}); }).length; return {msg: String(n), big: true}; }],
+  ['delete', 'deleteOne: Rajesh, Scientist', function(){ var i = -1; docs.some(function(d, k){ if (matches(d, {'Name.Firstname': 'Rajesh', Designation: 'Scientist'})) { i = k; return true; } return false; }); if (i >= 0) { docs.splice(i, 1); deleted++; } return {msg: '{ acknowledged: true, deletedCount: ' + (i >= 0 ? 1 : 0) + ' }'}; }],
+  ['combined', 'find: age under 35, salary 30000+', function(){ var r = docs.filter(function(d){ return matches(d, {Age: {$lt: 35}, 'Salary in INR': {$gte: 30000, $lt: 35000}}); }); return {msg: r.length + ' document(s) matched.', table: mongoTable(r)}; }],
+  ['update', 'updateMany: Role Team Lead', function(){ return updateMany({Role: 'Team Lead'}); }],
+  ['aggregate', 'aggregate: average salary per age', function(){ var r = groupAvgByAge().map(function(g){ return [g[0], avg(g[1])]; }); return {msg: r.length + ' group(s), sorted by age here (MongoDB does not guarantee order).', table: plainTable(['_id (Age)', 'averageSalary'], r)}; }],
+  ['mapreduce', 'mapReduce: average salary per age', function(){ var r = groupAvgByAge().map(function(g){ return [g[0], g[1].length > 1 ? avg(g[1]) : g[1][0]]; }); return {msg: 'reduce is only called for ages with two or more values; single values pass through. Output collection employee_average_salary:', table: plainTable(['_id (Age)', 'value'], r)}; }],
+  ['update_in', 'updateMany: Role $in Team Lead', function(){ return updateMany({Role: {$in: ['Team Lead']}}); }],
+  ['sta', 'mapReduce on Sta (cannot run)', function(){ return {err: 'Cannot run: there is no Sta collection in the notes, and the Employee documents have no Department or Salary arrays that this map function reads.'}; }]
+];
+function updateMany(filter){
+  var m = 0, mod = 0;
+  docs.forEach(function(d){ if (matches(d, filter)) { m++; if (d[SAL] !== 55650) { mod++; d[SAL] = 55650; changed[d.__i] = true; } } });
+  return {msg: '{ matchedCount: ' + m + ', modifiedCount: ' + mod + ' }', table: null, refresh: true};
+}
+var HPRESETS = [
+  ['country', 'GROUP BY country', function(H){ var g = {}; H.forEach(function(r){ g[r.country] = (g[r.country] || 0) + 1; }); return {table: plainTable(['country', 'sales_count'], Object.keys(g).sort().map(function(k){ return [k, g[k]]; }))}; }],
+  ['state', 'GROUP BY state', function(H){ var g = {}; H.forEach(function(r){ g[r.state] = (g[r.state] || 0) + 1; }); return {table: plainTable(['state', 'sales_count'], Object.keys(g).sort().map(function(k){ return [k, g[k]]; }))}; }],
+  ['concat', 'GROUP_CONCAT by product (not Hive)', function(H){ var g = {}; H.forEach(function(r){ (g[r.product] = g[r.product] || []).push(r.name); }); return {msg: 'As written, Hive stops with an error: GROUP_CONCAT is not a HiveQL function. The Hive form is concat_ws(\',\', collect_list(name)), which gives:', table: plainTable(['product', 'names'], Object.keys(g).sort().map(function(k){ return [k, g[k].join(',')]; }))}; }],
+  ['visa', 'view visa_transactions', function(H){ var r = H.filter(function(x){ return x.card === 'Visa'; }); return {table: salesTable(r)}; }],
+  ['master', 'view mastercard_transactions', function(H){ var r = H.filter(function(x){ return x.card === 'Mastercard'; }); return {table: salesTable(r)}; }],
+  ['seattle', "WHERE state = 'Seattle'", function(H){ var r = H.filter(function(x){ return x.state === 'Seattle'; }); return {msg: r.length + ' rows (the sample states are State1 to State5).', table: r.length ? salesTable(r) : null}; }],
+  ['maxont', 'MAX(transaction_id) for Ontario', function(H){ var r = H.filter(function(x){ return x.state === 'Ontario'; }); return {err: 'As written, Hive rejects this: the column state is selected next to MAX() without a GROUP BY. With GROUP BY state added, the result is ' + (r.length ? 'one row' : '0 rows, since no sample row has state Ontario') + '.'}; }]
+];
+function salesTable(rows){
+  return plainTable(['transaction_id', 'product', 'name', 'price', 'country', 'state', 'card_type'], rows.map(function(r){ return [r.id, r.product, r.name, r.price, r.country, r.state, r.card]; }));
+}
+var presetSel = $('preset');
+function fillPresets(){
+  presetSel.innerHTML = '';
+  (db === 'mongo' ? MPRESETS : HPRESETS).forEach(function(p){ var o = el('option', null, p[1]); o.value = p[0]; presetSel.appendChild(o); });
+  showCmd();
+}
+function showCmd(){
+  $('cmdtext').textContent = (db === 'mongo' ? DATA.mcmds : DATA.hcmds)[presetSel.value];
+}
+function renderData(){
+  var head = $('datahead'), box = $('datatable'); box.innerHTML = '';
+  if (db === 'mongo') {
+    head.textContent = 'Employee collection · ' + docs.length + ' documents' + (Object.keys(changed).length ? ' · ' + Object.keys(changed).length + ' changed (highlighted)' : '') + (deleted ? ' · ' + deleted + ' deleted' : '');
+    box.appendChild(mongoTable(docs));
+  } else {
+    head.textContent = 'sales table · ' + DATA.hive.length + ' rows (from the INSERT in Hive.txt)';
+    box.appendChild(salesTable(DATA.hive));
+  }
+}
+function showResult(r){
+  var box = $('result'); box.innerHTML = '';
+  box.appendChild(el('div', 'stagehead', 'Result'));
+  if (r.err) { box.appendChild(el('p', 'err', r.err)); return; }
+  if (r.msg) { var p = el('p', r.big ? 'out' : 'hint', r.msg); if (r.big) p.style.fontSize = '28px'; box.appendChild(p); }
+  if (r.table) box.appendChild(r.table);
+}
+function run(){
+  var list = db === 'mongo' ? MPRESETS : HPRESETS, p = list.filter(function(x){ return x[0] === presetSel.value; })[0];
+  var r = p[2](db === 'mongo' ? docs : DATA.hive);
+  showResult(r);
+  if (db === 'mongo') renderData();
+}
+$('runbtn').addEventListener('click', run);
+presetSel.addEventListener('change', showCmd);
+$('resetbtn').addEventListener('click', function(){ freshDocs(); deleted = 0; renderData(); $('result').innerHTML = ''; });
+$('customrun').addEventListener('click', function(){
+  var box = $('result');
+  try {
+    var f = JSON.parse($('custom').value);
+    var r = docs.filter(function(d){ return matches(d, f); });
+    showResult({msg: r.length + ' document(s) matched.', table: mongoTable(r)});
+  } catch (e) { showResult({err: 'Could not run that filter: ' + e.message}); }
+});
+function setDb(x){
+  db = x; $('db-mongo').setAttribute('aria-pressed', x === 'mongo'); $('db-hive').setAttribute('aria-pressed', x === 'hive');
+  $('customcard').style.display = x === 'mongo' ? '' : 'none';
+  $('resetbtn').style.display = x === 'mongo' ? '' : 'none';
+  $('result').innerHTML = '';
+  fillPresets(); renderData();
+}
+$('db-mongo').addEventListener('click', function(){ setDb('mongo'); });
+$('db-hive').addEventListener('click', function(){ setDb('hive'); });
+window.__lab = {run: run, matches: matches, getDocs: function(){ return docs; }};
+setDb('mongo');
+
+var h = location.hash.slice(1);
+if (h === 'wc' || h === 'lab' || h === 'notes') showTab(h);
+})();
+</script>
+</body>
+</html>
